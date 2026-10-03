@@ -12,12 +12,17 @@ while [ -h "$SOURCE" ]; do
   [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
 done
 DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"   # apps/cli
+# MSYS/Git-Bash on Windows: pwd returns /c/... which Node/tsx mangles into
+# C:\c\... Convert to a Windows-native path so TSX_TSCONFIG_PATH resolves.
+if command -v cygpath >/dev/null 2>&1 && [ "$(uname -o 2>/dev/null)" != "Msys" -o true ]; then
+  DIR="$(cygpath -m "$DIR" 2>/dev/null || echo "$DIR")"
+fi
 REPO_ROOT="$(cd "$DIR/../.." && pwd)"
 
 # The shared lib computes REPO_ROOT from cwd (it's built for the dashboard, which
 # runs from apps/dashboard). Pin it to this checkout so the CLI is cwd-independent
 # — but honour an operator-set AEON_REPO_ROOT so `aeon` can target another Aeon repo.
-export AEON_REPO_ROOT="${AEON_REPO_ROOT:-$REPO_ROOT}"
+export AEON_REPO_ROOT="${AEON_REPO_ROOT:-$(cygpath -m "$REPO_ROOT" 2>/dev/null || echo "$REPO_ROOT")}"
 
 TSX="$DIR/node_modules/.bin/tsx"
 
